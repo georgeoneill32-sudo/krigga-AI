@@ -7,10 +7,11 @@ from kivy.uix.label import Label
 from kivy.core.window import Window
 import requests
 import json
-import os
 
-# Put your free API key here
+# ⚠️ PLACE YOUR ACTUAL GOOGLE AI STUDIO API KEY HERE
 API_KEY = "YOUR_GEMINI_API_KEY_HERE"
+
+# Using standard beta model endpoint route
 API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={API_KEY}"
 
 class ChatBubble(Label):
@@ -65,25 +66,34 @@ class KriggaAIApp(App):
         if not user_text:
             return
             
+        if API_KEY == "YOUR_GEMINI_API_KEY_HERE":
+            self.add_message("System Error: Please add your Gemini API key inside main.py!", is_user=False)
+            return
+
         self.add_message(user_text, is_user=True)
         self.text_input.text = ""
         
-        # Prepare content for API payload
+        # Explicit role and parts structure required by Gemini API schema
         payload = {
-            "contents": [{"parts": [{"text": user_text}]}]
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [{"text": user_text}]
+                }
+            ]
         }
         headers = {'Content-Type': 'application/json'}
         
         try:
-            response = requests.post(API_URL, headers=headers, data=json.dumps(payload))
+            response = requests.post(API_URL, headers=headers, json=payload)
             if response.status_code == 200:
                 data = response.json()
                 ai_response = data['candidates'][0]['content']['parts'][0]['text']
                 self.add_message(ai_response, is_user=False)
             else:
-                self.add_message(f"Error {response.status_code}: Unable to get response.", is_user=False)
+                self.add_message(f"Error {response.status_code}: Server rejected request block.", is_user=False)
         except Exception as e:
-            self.add_message("Connection error. Check your internet context.", is_user=False)
+            self.add_message("Connection timed out. Check your device internet status.", is_user=False)
 
 if __name__ == '__main__':
     KriggaAIApp().run()
